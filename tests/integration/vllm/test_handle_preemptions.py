@@ -54,6 +54,29 @@ def test_lmcache_connector_preemption_patch_handles_no_inner_impl():
     connector.handle_preemptions({"req-1"})
 
 
+def test_lmcache_connector_new_metadata_is_noop_for_sync_store():
+    """vLLM 0.21 metadata calls are safe when no async save can be pending."""
+    LMCacheConnectorV1 = _import_and_patch_vllm_connector()
+
+    connector = object.__new__(LMCacheConnectorV1)
+    connector._lmcache_engine = MagicMock(store_async=False)
+
+    connector.handle_preemptions(SimpleNamespace(requests=[]))
+
+    connector._lmcache_engine.handle_preemptions.assert_not_called()
+
+
+def test_lmcache_connector_new_metadata_fails_closed_for_async_store():
+    """Do not hide a missing preemption-ID mapping for asynchronous stores."""
+    LMCacheConnectorV1 = _import_and_patch_vllm_connector()
+
+    connector = object.__new__(LMCacheConnectorV1)
+    connector._lmcache_engine = MagicMock(store_async=True)
+
+    with pytest.raises(RuntimeError, match="requires explicit request IDs"):
+        connector.handle_preemptions(SimpleNamespace(requests=[]))
+
+
 def test_ascend_adapter_drains_pending_stores_for_async_producer():
     """Async non-consumer workers must drain pending stores before reuse."""
     pytest.importorskip("lmcache")

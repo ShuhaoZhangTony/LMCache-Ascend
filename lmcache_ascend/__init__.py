@@ -391,6 +391,18 @@ def _patch_vllm_v1_adapter():
     lmc_vllm_v1_adapter.LMCacheConnectorV1Impl = ascend_LMCacheAscendConnectorV1Impl
 
     def handle_preemptions(self, preempted_req_ids):
+        # vLLM 0.21 passes connector metadata to this hook, whereas the
+        # LMCache-Ascend 0.4.3 adapter expects the legacy set[str] ABI. Sync
+        # stores have no in-flight save to drain, so the metadata call is a
+        # safe no-op. Async stores must fail closed until their preempted IDs
+        # are represented explicitly in the new metadata contract.
+        if not isinstance(preempted_req_ids, set):
+            if getattr(self._lmcache_engine, "store_async", False):
+                raise RuntimeError(
+                    "LMCache-Ascend async store preemption requires explicit "
+                    "request IDs with this vLLM connector ABI"
+                )
+            return
         method = getattr(self._lmcache_engine, "handle_preemptions", None)
         if callable(method):
             method(preempted_req_ids)
