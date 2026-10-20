@@ -67,7 +67,7 @@ def CreateNPUConnector(
             return conn
     elif engine == EngineType.SGLANG:
         # First Party
-        from lmcache_ascend.v1.npu_connector.npu_connectors import (
+        from lmcache_ascend.v1.npu_connector.sglang_connectors import (
             SGLangLayerwiseNPUConnector,
             SGLangNPUConnector,
         )
