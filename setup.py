@@ -343,7 +343,10 @@ class CustomAscendCmakeBuildExt(build_ext):
         if _cc_compiler is not None:
             cmake_cmd += [f"  -DCMAKE_C_COMPILER={_cc_compiler}"]
 
-        cmake_cmd += [f" && cmake --build {BUILD_OPS_DIR} -j --verbose"]
+        build_jobs = int(os.environ.get("MAX_JOBS", "4"))
+        if build_jobs < 1:
+            raise ValueError("MAX_JOBS must be positive")
+        cmake_cmd += [f" && cmake --build {BUILD_OPS_DIR} -j {build_jobs} --verbose"]
         cmake_cmd += [f" && cmake --install {BUILD_OPS_DIR}"]
         cmake_cmd = "".join(cmake_cmd)
 
